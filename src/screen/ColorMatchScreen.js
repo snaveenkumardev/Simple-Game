@@ -7,7 +7,7 @@ import {
   GestureDetector,
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
-import Animated, {useSharedValue, useAnimatedStyle, withTiming, runOnJS} from 'react-native-reanimated';
+import Animated, {useSharedValue, useAnimatedStyle, withTiming, runOnJS, measure, useAnimatedRef} from 'react-native-reanimated';
 
 const ColorMatchScreen = () => {
   //Reference
@@ -17,27 +17,21 @@ const ColorMatchScreen = () => {
 
   const {weight, height} = useWindowDimensions()
 
+  // Shared value
   const pressed = useSharedValue("");
-  const offsetFirstColor = useSharedValue({
-    X : 0, Y: 0
-  });
-  const offsetSecondColor = useSharedValue(
-    {
-      X : 0, Y: 0
-    }
-  );
-  const offsetThirdColor = useSharedValue(
-    {
-      X : 0, Y: 0
-    }
-  )
-  
   const offsetX = useSharedValue(0)
   const offsetY = useSharedValue(0)
+  
+  // Reference
+  const firstColorRef = useAnimatedRef();
+  const secondColorRef = useAnimatedRef();
+  const thirdColorRef = useAnimatedRef();
+
 
   const [colorsData, setColorsData] = useState({
     colors: ['red', 'green', 'yellow'],
     references: ['firstColor', 'secondColor', 'thirdColor'],
+    animationRef: [firstColorRef, secondColorRef, thirdColorRef]
   });
   const [colorsPosition, setColorsPosition] = useState({
     firstColor: '',
@@ -74,12 +68,26 @@ const ColorMatchScreen = () => {
       pressed.value = true;
     })
     .onChange(event => {
-      console.log(event)
+      // console.log(event)
       offsetX.value =  event.translationX;
       offsetY.value =  event.translationY
     })
     .onFinalize(() => {
       pressed.value = false;
+      const measurement = measure(firstColorRef);
+      if (measurement === null) {
+        console.log("Animated ref null");
+      } else {
+        let {pageX, pageY} = measurement
+        let {X, Y} = colorsPosition["firstColor"]
+        if (selectedColor == "red") {
+          if (pageX >= X && pageX <= Math.ceil(X + 123/5) && pageY <=Math.ceil(Y/2)) {
+            console.log("Correct")
+          } else {
+            console.log("Wrong")
+          }
+        }
+      }
       offsetX.value = 0;
       offsetY.value = 0;
     });
@@ -115,13 +123,13 @@ const ColorMatchScreen = () => {
             return (
               <View key={index} onLayout={({nativeEvent : {layout}}) => {
                 console.log(layout.x, layout.y, color, "color option")
-                if (index == 0) {
-                  offsetFirstColor.value = {X: layout.x, Y: height - 160}
-                } else if (index == 1) {
-                  offsetSecondColor.value = {X: layout.x, Y: height - 160}
-                } else {
-                  offsetThirdColor.value = {X: layout.x, Y: height - 160}
-                }
+                // if (index == 0) {
+                //   offsetFirstColor.value = {X: layout.x, Y: height - 160}
+                // } else if (index == 1) {
+                //   offsetSecondColor.value = {X: layout.x, Y: height - 160}
+                // } else {
+                //   offsetThirdColor.value = {X: layout.x, Y: height - 160}
+                // }
                 setColorsOptionPosition(
                   (colorspositions)=> {
                     return {...colorspositions, [colorsData.references[index]]: {X: layout.x, Y: height - 160}}
@@ -131,7 +139,7 @@ const ColorMatchScreen = () => {
                 <GestureDetector gesture={pan}>
                   <Animated.View
                     style={[styles.colorCircle, {backgroundColor: color}, selectedColor == color ? animatedStyles : {}]}
-                    
+                    ref = {colorsData.animationRef[index]}
                   />
                 </GestureDetector>
               </View>
