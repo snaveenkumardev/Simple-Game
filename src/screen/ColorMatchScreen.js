@@ -1,14 +1,39 @@
-import {StyleSheet, Text, View} from 'react-native';
+import {StyleSheet, Text, View, useWindowDimensions} from 'react-native';
 import React, {useEffect, useState} from 'react';
 import ColorCircle from '../components/ColorCircle';
 import AnimatableCircle from '../components/AnimatableCircle';
-import {useAnimatedRef, measure, runOnUI} from 'react-native-reanimated';
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from 'react-native-gesture-handler';
+import Animated, {useSharedValue, useAnimatedStyle, withTiming, runOnJS} from 'react-native-reanimated';
 
 const ColorMatchScreen = () => {
   //Reference
   // const firstColorRef = useAnimatedRef();
   // const secondColorRef = useAnimatedRef();
   // const thirdColorRef = useAnimatedRef();
+
+  const {weight, height} = useWindowDimensions()
+
+  const pressed = useSharedValue("");
+  const offsetFirstColor = useSharedValue({
+    X : 0, Y: 0
+  });
+  const offsetSecondColor = useSharedValue(
+    {
+      X : 0, Y: 0
+    }
+  );
+  const offsetThirdColor = useSharedValue(
+    {
+      X : 0, Y: 0
+    }
+  )
+  
+  const offsetX = useSharedValue(0)
+  const offsetY = useSharedValue(0)
 
   const [colorsData, setColorsData] = useState({
     colors: ['red', 'green', 'yellow'],
@@ -19,24 +44,54 @@ const ColorMatchScreen = () => {
     secondColor: '',
     thirdColor: '',
   });
+  const [colorsOptionPosition, setColorsOptionPosition] = useState({
+    firstColor: '',
+    secondColor: '',
+    thirdColor: '',
+  });
 
-  // function check() {
-  //      colorsData.references.forEach((reference, index)=> {
-  //         runOnUI(() => {
-  //             const measurement = measure(reference);
-  //             if (measurement === null) {
-  //                 console.log("null")
-  //               return;
-  //             }
-  //             console.log(colorsData.colors[index], measurement)
+  const [selectedColor, setSelectedColor] = useState("")
 
-  //             // ...
-  //           })();
+  useEffect(()=> {
+    console.log(colorsOptionPosition, "color option")
+  }, [colorsOptionPosition])
 
-  //     })
-  //     console.log("Get position done")
-  // }
+  useEffect(()=> {
+    console.log(colorsPosition, "color position")
+  },[colorsPosition])
 
+  const pan = Gesture.Pan()
+    .onBegin((event) => {
+      // console.log(event)
+      if (event.absoluteX >= colorsOptionPosition.thirdColor.X) {
+        console.log(colorsOptionPosition.thirdColor, "color value")
+        runOnJS(setSelectedColor)("yellow")
+      }  else if (event.absoluteX >= colorsOptionPosition.secondColor.X) {
+        runOnJS(setSelectedColor)("green") 
+      }  else {
+        runOnJS(setSelectedColor)("red")
+      }
+      pressed.value = true;
+    })
+    .onChange(event => {
+      console.log(event)
+      offsetX.value =  event.translationX;
+      offsetY.value =  event.translationY
+    })
+    .onFinalize(() => {
+      pressed.value = false;
+      offsetX.value = 0;
+      offsetY.value = 0;
+    });
+
+    const animatedStyles = useAnimatedStyle(() => ({
+      transform: [
+        { scale: withTiming(pressed.value ? 1.2 : 1) },
+        {translateX: offsetX.value},
+        {translateY: offsetY.value}
+      ],
+    }));
+  
   return (
     <View style={styles.container}>
       {/* Color Questions */}
@@ -57,7 +112,30 @@ const ColorMatchScreen = () => {
       <View style = {styles.colorOptionsContainer}>
         <View style={[styles.colorContainer]}>
           {colorsData.colors.map((color, index) => {
-            return <AnimatableCircle index={index + 1} backgroundColor = {color}/>;
+            return (
+              <View key={index} onLayout={({nativeEvent : {layout}}) => {
+                console.log(layout.x, layout.y, color, "color option")
+                if (index == 0) {
+                  offsetFirstColor.value = {X: layout.x, Y: height - 160}
+                } else if (index == 1) {
+                  offsetSecondColor.value = {X: layout.x, Y: height - 160}
+                } else {
+                  offsetThirdColor.value = {X: layout.x, Y: height - 160}
+                }
+                setColorsOptionPosition(
+                  (colorspositions)=> {
+                    return {...colorspositions, [colorsData.references[index]]: {X: layout.x, Y: height - 160}}
+                  }
+                )
+              }}>
+                <GestureDetector gesture={pan}>
+                  <Animated.View
+                    style={[styles.colorCircle, {backgroundColor: color}, selectedColor == color ? animatedStyles : {}]}
+                    
+                  />
+                </GestureDetector>
+              </View>
+            );
           })}
         </View>
       </View>
@@ -79,6 +157,19 @@ const styles = StyleSheet.create({
   colorOptionsContainer: {
     position: 'absolute',
     bottom: 60,
-    width : "100%"
+    width: '100%',
+  },
+  colorContent: {
+    width: 123,
+    height: 123,
+    borderWidth: 1,
+    borderRadius: 123,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  colorCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 100,
   },
 });

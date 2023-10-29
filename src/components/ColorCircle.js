@@ -10,7 +10,7 @@ const ColorCircle = ({index, colorText, reference, setColorsPosition}) => {
       onLayout={({nativeEvent : {layout}}) => {
         console.log(colorText,layout);
         setColorsPosition((colorspositions)=> {
-          return {...colorspositions, [reference]: {X: layout.x, Y: layout.y}}
+          return {...colorspositions, [reference]: {X: layout.x, Y: 163 }}
         })
       }}>
       <Text>{colorText}</Text>
